@@ -17,7 +17,8 @@ bool verify_array(int* first, int* last) {
 	return true;
 }
 
-bool verify_array(int* first, int* last, bool (*cmp)(int, int)) {
+template<typename CMP>
+bool verify_array(int* first, int* last, CMP cmp) {
 	int prev = *first;
 	int* i = first + 1;
 	while (i < last) {
@@ -44,7 +45,8 @@ void insertion_sort(int* first, int* last) {
 	}
 }
 
-void insertion_sort(int* first, int* last, bool (*cmp)(int, int)) {
+template<typename CMP>
+void insertion_sort(int* first, int* last, CMP cmp) {
 	int key;
 	int* i; int* j;
 	for (i = first + 1; i < last; ++i) {
@@ -80,8 +82,8 @@ void quick_sort(int* first, int* last) {
 	return;
 }
 
-
-void quick_sort(int* first, int* last, bool (*cmp)(int, int)) {
+template<typename CMP>
+void quick_sort(int* first, int* last, CMP cmp) {
 	if (first < last) {
 		int pivot = *first;
 		int* i = first; int* j = first + 1;
@@ -103,17 +105,16 @@ void quick_sort(int* first, int* last, bool (*cmp)(int, int)) {
 	return;
 }
 
-void radix_sort(int* first, int* last, void(*sorter)(int*, int*, bool (*cmp)(int, int))) {
-	int largest_number = 0; int smallest_number = 0;
+void radix_sort(int* first, int* last) {
+	int largest_number = 0;
 	for (int* i = first; i < last; ++i) {
 		largest_number = max(*i, largest_number);
-		smallest_number = min(*i, smallest_number);
+		largest_number = max(-(*i), largest_number);
 	}
 	int digits = 1;
-	while (largest_number != 0 || smallest_number != 0) {
+	while (largest_number != 0) {
 		largest_number /= 10;
-		smallest_number /= 10;
-		sorter(first, last, [digits](int i, int j) {
+		insertion_sort(first, last, [digits](int i, int j) {
 			int a = ((i / digits) % 10);
 			int b = ((j / digits) % 10);
 			return (a < b);
@@ -121,6 +122,29 @@ void radix_sort(int* first, int* last, void(*sorter)(int*, int*, bool (*cmp)(int
 		digits *= 10;
 	}
 }
+
+template<typename CMP>
+void radix_sort(int* first, int* last, CMP cmp) {
+	int largest_number = 0;
+	for (int* i = first; i < last; ++i) {
+		largest_number = max(*i, largest_number);
+		largest_number = max(-(*i), largest_number);
+	}
+	int digits = 1;
+	while (largest_number != 0) {
+		largest_number /= 10;
+		insertion_sort(first, last, [&digits, &cmp](int i, int j) {
+			int a = ((i / digits) % 10);
+			int b = ((j / digits) % 10);
+			return cmp(a,b);
+			});
+		digits *= 10;
+	}
+}
+
+auto desc = [](int i, int j) {
+	return i > j;
+};
 
 
 constexpr int arr0[] = { 3, 5, 4, 2, 6, 1 };
@@ -137,10 +161,9 @@ int main() {
 	}
 	cout << '\n';
 	int N = sizeof(target) / sizeof(target[0]);
-	quick_sort(target, target + N, [](int i, int j) {
-		return i > j;
-		});
-	radix_sort(target, target + N, &quick_sort);
+	quick_sort(target, target + N, desc);
+	radix_sort(target, target + N, desc);
+
 
 	for (int i : target) {
 		cout << i << ' ';
@@ -150,9 +173,7 @@ int main() {
 		cout << "Ascending order sorted.\n";
 	}
 	else {
-		if (verify_array(target, target + N, [](int i, int j) {
-			return i > j;
-			})) {
+		if (verify_array(target, target + N, desc) {
 			cout << "Descending order sorted.\n";
 		}
 		else {
